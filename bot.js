@@ -13,7 +13,7 @@ var memberList = []
 const client = new Client({partials: ["CHANNEL"], intents: [Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS, Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.DIRECT_MESSAGE_REACTIONS]});
 client.on("ready", async ()=> {
     console.log(`Logged in as ${client.user.tag}!`)
-    let timeout =  timeUntilTest()
+    let timeout =  timeUntilSunday()
     console.log(`Time until next Sunday Event: ${timeout}`)
     members = await fetchMusicMembers('480931134222630912')
     memberList = members
@@ -114,7 +114,7 @@ async function sundayEvent(){
     }
     
     //Set timeout until next saturday noon PST
-    let timeout =  timeUntilTest()
+    let timeout =  timeUntilSaturday()
     console.log(`Time until next Sunday Event: ${timeout}`)
     timerId = setTimeout(saturdayEvent, timeout)
 }
@@ -126,7 +126,7 @@ function saturdayEvent(){
     }
     
     //Set timeout until next sunday noon PST
-    let timeout =  timeUntilTest()
+    let timeout =  timeUntilSunday()
     console.log(`Time until next Sunday Event: ${timeout}`)
     timerId = setTimeout(sundayEvent, timeout)
 }
