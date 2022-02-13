@@ -4,31 +4,43 @@ require('dotenv').config()
 const Discord = require("discord.js");
 const {Client, Intents} = require("discord.js");
 const moment = require("moment-timezone");
-var link = ''
-var activeMember = ''
+const fs = require("fs");
+var AM = ''
 var memberList = []
 
 //---------------------------------------- CLIENT CREATION --------------------------------------------------
 
 const client = new Client({partials: ["CHANNEL"], intents: [Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS, Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.DIRECT_MESSAGE_REACTIONS]});
 client.on("ready", async ()=> {
+    //Logged on successfully 
     console.log(`Logged in as ${client.user.tag}!`)
-    let timeout =  timeUntilSunday()
+
+    //Calculate time until next sunday
+    let timeout =  timeUntilTest()
     console.log(`Time until next Sunday Event: ${timeout}`)
+
+    //Create member list
     members = await fetchMusicMembers('480931134222630912')
     memberList = members
+
+    //Read if there is an active member
+    console.log(readActiveMember() + 'is the current member')
+    
+    //Create timeout for function
     let timerId = setTimeout(sundayEvent, timeout)
 });
 
 //---------------------------------------- MESSAGE HANDLING --------------------------------------------------
 
 client.on("messageCreate", async msg => {
+
+    
     //console.log(msg)
     if (msg.content === "ping") {
         msg.reply("pong")
     }
 
-    if (msg.channel.type == "DM" && msg.author.id == activeMember) {
+    if (msg.channel.type == "DM" && msg.author.id == AM) {
         await linkSubmission(msg)
     }
 
@@ -85,6 +97,18 @@ function timeUntilTest(){
 }
 
 async function sundayEvent(){
+    //Post this week's link to music channel, or warn if there wasn't a link submitted
+    link = readLinkFile()
+    if (link) {
+        client.channels.cache.get("936667112729108582").send(`Here is this week's album!
+    ${link}`)
+        updateLinkFile('')
+    } else {
+        client.channels.cache.get("936667112729108582").send(`Oh no, there doesn't seem to be a link submitted for this week.`)
+    }
+    
+    updateActiveMember('')
+
     //Validate if there are members, if not, restart list
     console.log(`First Call: ${memberList.length}`)
     if(memberList.length == 0) {
@@ -92,41 +116,46 @@ async function sundayEvent(){
         memberList = await fetchMusicMembers('480931134222630912')
         console.log(`After repopulation: ${memberList.length}`)
     } 
-    //Get random user from member list
-    member = memberList.pop(Math.floor(Math.random()*members.length));
-    member = member.toString().replace(/[&\/\\#, +()$~%.'":*?<>{}@!<>]/g, '')
-    console.log(`After Pop: ${memberList.length}`)
-    console.log(`${member} has been selected for the week`)
+    //Check if there is already an active member
+    let activeMember = readActiveMember();
+    if (!activeMember){
+        //Get random user from member list
+        member = memberList.pop(Math.floor(Math.random()*members.length));
+        member = member.toString().replace(/[&\/\\#, +()$~%.'":*?<>{}@!<>]/g, '')
+        console.log(`After Pop: ${memberList.length}`)
+        console.log(`${member} has been selected for the week`)
 
-    //Update week's active member
-    activeMember = member;
+        //Update week's active member
+        updateActiveMember(member)
+    } else {
+        console.log(`${activeMember} has been selected for the week, using the File`)
+    }
+
+    //Read updated active member
+    activeMember = readActiveMember();
 
     //Send message asking them to send link
-    client.users.cache.get(member).send(`Hello <@${member}>. It is your turn to recommend an album of the week. Please reply to me before Friday with a YouTube Music link to the album.`);
+    client.users.cache.get(activeMember).send(`Hello <@${activeMember}>. It is your turn to recommend an album of the week. Please reply to me before Friday with a YouTube Music link to the album.`);
     
-    //Post this week's link to music channel, or warn if there wasn't a link submitted
-    if (link) {
-        client.channels.cache.get("936667112729108582").send(`Here is this week's album!
-    ${link}`)
-        link = ''
-    } else {
-        client.channels.cache.get("936667112729108582").send(`Oh no, there doesn't seem to be a link submitted for this week.`)
-    }
+    
     
     //Set timeout until next saturday noon PST
-    let timeout =  timeUntilSaturday()
+    let timeout =  timeUntilTest()
     console.log(`Time until next Sunday Event: ${timeout}`)
     timerId = setTimeout(saturdayEvent, timeout)
 }
 
 function saturdayEvent(){
     //If a link hasn't been submitted by saturday noon PST, remind user to send one
+    link = readLinkFile()
+    activeMember = readActiveMember()
+    console.log(activeMember)
     if (!link){
-        client.users.cache.get(activeMember).send(`Hello <@${member}>. Please remember to submit a link before next Sunday!`);
+        client.users.cache.get(activeMember).send(`Hello <@${activeMember}>. Please remember to submit a link before next Sunday!`);
     }
     
     //Set timeout until next sunday noon PST
-    let timeout =  timeUntilSunday()
+    let timeout =  timeUntilTest()
     console.log(`Time until next Sunday Event: ${timeout}`)
     timerId = setTimeout(sundayEvent, timeout)
 }
@@ -141,11 +170,16 @@ async function linkSubmission(msg){
         await msg.react('👎')
         const filter = (reaction, user) => ((reaction.emoji.name === '👍' || reaction.emoji.name === '👎') && user.id === activeMember)
         collected = await msg.awaitReactions({filter, max: 1, time: 15000})
-        if (collected.first().emoji.name == '👍'){
-            //Update link 
+        let colEmoji = collected.first()
+        if (!colEmoji){
+            msg.reply("Something went wrong, please try again. React to the message with 👍 or 👎 only.")
+            return
+        }
+        if (colEmoji.emoji.name == '👍'){
+            //Update link file
             msg.reply("Thank you for your selection!")
-            link = msg.content
-            console.log(`link updated to ${link}`)
+            updateLinkFile(msg.content)
+            console.log(`link updated to ${msg.content}`)
         } else {
             msg.reply("No worries, please submit another link.")
             return
@@ -156,5 +190,32 @@ async function linkSubmission(msg){
     }
 }
 
+function updateLinkFile(link){
+    //Update the text file with the provided link
+    fs.writeFileSync('sundayLink.txt', link)
+    console.log("Successfully wrote link to file")
+}
+
+function updateActiveMember(member){
+    //Update the text file with the provided active member
+    fs.writeFileSync('activeMember.txt', member)
+    console.log("Successfully wrote active member to file")
+    AM = member;
+}
+
+function readLinkFile(){
+    //Read the text file and post the return the link string
+    link = fs.readFileSync('./sundayLink.txt',
+            {encoding:'utf8', flag:'r'});
+    return link.toString()
+}
+
+function readActiveMember(){
+   //Read the text file and post the return the active member for the week
+    member = fs.readFileSync('./activeMember.txt',
+            {encoding:'utf8', flag:'r'});
+    console.log("reading file. member is " + member)
+    return member.toString()
+}
+
 //Test cases: 
-// -Sending a message when not on the member list
