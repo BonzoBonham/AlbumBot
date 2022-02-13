@@ -16,7 +16,7 @@ client.on("ready", async ()=> {
     console.log(`Logged in as ${client.user.tag}!`)
 
     //Calculate time until next sunday
-    let timeout =  timeUntilTest()
+    let timeout =  timeUntilSunday()
     console.log(`Time until next Sunday Event: ${timeout}`)
 
     //Create member list
@@ -140,7 +140,7 @@ async function sundayEvent(){
     
     
     //Set timeout until next saturday noon PST
-    let timeout =  timeUntilTest()
+    let timeout =  timeUntilSaturday()
     console.log(`Time until next Sunday Event: ${timeout}`)
     timerId = setTimeout(saturdayEvent, timeout)
 }
@@ -155,7 +155,7 @@ function saturdayEvent(){
     }
     
     //Set timeout until next sunday noon PST
-    let timeout =  timeUntilTest()
+    let timeout =  timeUntilSunday()
     console.log(`Time until next Sunday Event: ${timeout}`)
     timerId = setTimeout(sundayEvent, timeout)
 }
