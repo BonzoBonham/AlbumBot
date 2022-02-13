@@ -120,7 +120,7 @@ async function sundayEvent(){
     let activeMember = readActiveMember();
     if (!activeMember){
         //Get random user from member list
-        member = memberList.pop(Math.floor(Math.random()*members.length));
+        member = memberList.pop(Math.floor(Math.random()*memberList.length));
         member = member.toString().replace(/[&\/\\#, +()$~%.'":*?<>{}@!<>]/g, '')
         console.log(`After Pop: ${memberList.length}`)
         console.log(`${member} has been selected for the week`)
