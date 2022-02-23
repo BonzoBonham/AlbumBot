@@ -24,7 +24,8 @@ client.on("ready", async ()=> {
     memberList = members
 
     //Read if there is an active member
-    console.log(readActiveMember() + 'is the current member')
+    initActive = readActiveMember()
+    console.log(initActive + 'is the current member')
     
     //Create timeout for function
     let timerId = setTimeout(sundayEvent, timeout)
@@ -162,6 +163,8 @@ function saturdayEvent(){
 
 
 async function linkSubmission(msg){
+    //Initialize active memberw
+    activeMember = readActiveMember();
     //Validate that message is a link
     if (msg.content.includes('youtube.com/')){
         //Validate user is sure that the selection is ok
@@ -215,6 +218,7 @@ function readActiveMember(){
     member = fs.readFileSync('./activeMember.txt',
             {encoding:'utf8', flag:'r'});
     console.log("reading file. member is " + member)
+    AM = member;
     return member.toString()
 }
 
